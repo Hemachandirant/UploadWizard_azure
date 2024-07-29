@@ -466,10 +466,11 @@ async def create_view():
         output_response = df.to_dict(orient="records")
         logger.debug(f"Query results: {output_response}")
 
-        # Save the DataFrame to a CSV file
-        output_filename = "output.csv"
+        # Save the DataFrame to a CSV file with the database name
+        # sanitized_db_name = db_name_global.replace(" ", "_")  # Replace spaces with underscores or handle other sanitizations
+        output_filename = f"{db_name_global}.csv"
         df.to_csv(output_filename, index=False)
-        logger.debug("Data saved to output.csv")
+        logger.debug(f"Data saved to {output_filename}")
 
         # Upload the CSV file to Azure Blob Storage using SAS URL and Token
         try:

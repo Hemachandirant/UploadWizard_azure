@@ -1,0 +1,6 @@
+caller_id,employee_id,first_name,last_name,email,phone,department,date,attendance_status,time_in,time_out,hours_worked,late,early_leave,notes,incident_id,incident_date,incident_status,incident_priority,incident_description,incident_resolution
+Caller 001,E001,John,Doe,johndoe@example.com,1234567890,Marketing,2022-01-01 00:00:00,Present,2024-07-29 08:30:00,2024-07-29 17:00:00,8.5,No,No,Normal day,INC001,2022-01-01,Resolved,High,System outage,Restarted the system
+Caller 002,E002,Jane,Smith,janesmith@example.com,2345678901,Sales,2022-01-01 00:00:00,Absent,NaT,NaT,0.0,Yes,Yes,Unplanned leave,INC002,2022-01-02,In Progress,Low,Software update,nan
+Caller 003,E003,Jim,Brown,jimbrown@example.com,3456789012,Engineering,2022-01-01 00:00:00,Present,2024-07-29 08:45:00,2024-07-29 17:15:00,8.5,Yes,No,Late due to traffic,INC003,2022-01-03,Resolved,Medium,Password reset,Reset the password
+Caller 004,E004,Julia,Johnson,juliajohnson@example.com,4567890123,HR,2022-01-01 00:00:00,Present,2024-07-29 08:30:00,2024-07-29 16:00:00,7.5,No,Yes,Left early for personal reasons,INC004,2022-01-04,Open,High,Network issue,nan
+Caller 005,E005,Jack,Williams,jackwilliams@example.com,5678901234,Product,2022-01-01 00:00:00,Absent,NaT,NaT,0.0,Yes,Yes,Unplanned leave,INC005,2022-01-05,In Progress,Low,Browser issue,nan
