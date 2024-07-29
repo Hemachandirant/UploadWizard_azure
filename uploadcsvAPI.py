@@ -437,64 +437,100 @@ async def create_view():
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
 
-    if len(table_names) <= 1:
-        return {"status": "Not enough tables to create a view. At least two tables are required."}
+    if len(table_names) == 0:
+        return {"status": "No tables found in the database."}
 
-    # Create SQLDatabase instance
-    db = SQLDatabase(engine)
-    logger.debug(f"Database object: {db}")
+    # Handle the case where there's only one table
+    if len(table_names) == 1:
+        table_name = table_names[0]
+        sql_query = f"SELECT * FROM {table_name}"
+        logger.debug(f"Single table SQL Query: {sql_query}")
 
-    chain = create_sql_query_chain(llm, db)
-    sql_query_raw = chain.invoke({"question": "combine the tables present in the database"})
-    logger.debug(f"Raw SQL Query: {sql_query_raw}")
-
-    # Extract the actual SQL query if there is additional text
-    sql_query_match = re.search(r"```sql\n(.*?)\n```", sql_query_raw, re.DOTALL)
-    if sql_query_match:
-        sql_query = sql_query_match.group(1).strip()
-    else:
-        logger.error("Failed to extract SQL query from response")
-        raise HTTPException(status_code=500, detail="Failed to extract SQL query from response")
-
-    logger.debug(f"Cleaned SQL Query: {sql_query}")
-
-    # Execute the SQL query
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    try:
-        df = pd.read_sql_query(sql_query, engine)
-        output_response = df.to_dict(orient="records")
-        logger.debug(f"Query results: {output_response}")
-
-        # Save the DataFrame to a CSV file with the database name
-        # sanitized_db_name = db_name_global.replace(" ", "_")  # Replace spaces with underscores or handle other sanitizations
-        output_filename = f"{db_name_global}.csv"
-        df.to_csv(output_filename, index=False)
-        logger.debug(f"Data saved to {output_filename}")
-
-        # Upload the CSV file to Azure Blob Storage using SAS URL and Token
+        # Execute the SQL query and save the data
+        Session = sessionmaker(bind=engine)
+        session = Session()
         try:
-            blob_service_client = BlobServiceClient(account_url=base_url, credential=sas_token)
-            blob_client = blob_service_client.get_blob_client(container=container_name, blob=output_filename)
+            df = pd.read_sql_query(sql_query, engine)
+            output_response = df.to_dict(orient="records")
+            logger.debug(f"Query results: {output_response}")
 
-            with open(output_filename, "rb") as data:
-                blob_client.upload_blob(data, overwrite=True)
+            # Save the DataFrame to a CSV file with the database name
+            output_filename = f"{db_name_global}.csv"
+            df.to_csv(output_filename, index=False)
+            logger.debug(f"Data saved to {output_filename}")
 
-            logger.debug("Data uploaded to Azure Blob Storage")
-        except Exception as e:
-            logger.error(f"Error uploading to Azure Blob Storage: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error uploading to Azure Blob Storage: {str(e)}")
+            # Upload the CSV file to Azure Blob Storage using SAS URL and Token
+            try:
+                blob_service_client = BlobServiceClient(account_url=base_url, credential=sas_token)
+                blob_client = blob_service_client.get_blob_client(container=container_name, blob=output_filename)
 
-        # Store the DataFrame into the 'combined_table'
-        df.to_sql('combined_table', con=engine, if_exists='replace', index=False)
-        logger.debug("Data stored in the 'combined_table'")
-    except SQLAlchemyError as e:
-        logger.error(f"SQLAlchemy error during query execution: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"SQLAlchemy error during query execution: {str(e)}")
-    finally:
-        session.close()
+                with open(output_filename, "rb") as data:
+                    blob_client.upload_blob(data, overwrite=True)
 
-    return {"result": output_response, "sql_query": sql_query}
+                logger.debug("Data uploaded to Azure Blob Storage")
+            except Exception as e:
+                logger.error(f"Error uploading to Azure Blob Storage: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Error uploading to Azure Blob Storage: {str(e)}")
+
+            return {"result": output_response, "sql_query": sql_query}
+        except SQLAlchemyError as e:
+            logger.error(f"SQLAlchemy error during query execution: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"SQLAlchemy error during query execution: {str(e)}")
+        finally:
+            session.close()
+    else:
+        # Handle the case where there are multiple tables (your existing logic)
+        db = SQLDatabase(engine)
+        chain = create_sql_query_chain(llm, db)
+        sql_query_raw = chain.invoke({"question": "combine the tables present in the database"})
+        logger.debug(f"Raw SQL Query: {sql_query_raw}")
+
+        # Extract the actual SQL query if there is additional text
+        sql_query_match = re.search(r"```sql\n(.*?)\n```", sql_query_raw, re.DOTALL)
+        if sql_query_match:
+            sql_query = sql_query_match.group(1).strip()
+        else:
+            logger.error("Failed to extract SQL query from response")
+            raise HTTPException(status_code=500, detail="Failed to extract SQL query from response")
+
+        logger.debug(f"Cleaned SQL Query: {sql_query}")
+
+        # Execute the SQL query
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        try:
+            df = pd.read_sql_query(sql_query, engine)
+            output_response = df.to_dict(orient="records")
+            logger.debug(f"Query results: {output_response}")
+
+            # Save the DataFrame to a CSV file with the database name
+            output_filename = f"{db_name_global}.csv"
+            df.to_csv(output_filename, index=False)
+            logger.debug(f"Data saved to {output_filename}")
+
+            # Upload the CSV file to Azure Blob Storage using SAS URL and Token
+            try:
+                blob_service_client = BlobServiceClient(account_url=base_url, credential=sas_token)
+                blob_client = blob_service_client.get_blob_client(container=container_name, blob=output_filename)
+
+                with open(output_filename, "rb") as data:
+                    blob_client.upload_blob(data, overwrite=True)
+
+                logger.debug("Data uploaded to Azure Blob Storage")
+            except Exception as e:
+                logger.error(f"Error uploading to Azure Blob Storage: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Error uploading to Azure Blob Storage: {str(e)}")
+
+            # Store the DataFrame into the 'combined_table'
+            df.to_sql('combined_table', con=engine, if_exists='replace', index=False)
+            logger.debug("Data stored in the 'combined_table'")
+        except SQLAlchemyError as e:
+            logger.error(f"SQLAlchemy error during query execution: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"SQLAlchemy error during query execution: {str(e)}")
+        finally:
+            session.close()
+
+        return {"result": output_response, "sql_query": sql_query}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
