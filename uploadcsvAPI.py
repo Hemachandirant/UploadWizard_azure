@@ -504,7 +504,7 @@ async def create_view():
             logger.debug(f"Query results: {output_response}")
 
             # Save the DataFrame to a CSV file with the database name
-            output_filename = f"{db_name_global}.csv"
+            output_filename = f"{db_name_global.lower()}.csv"
             df.to_csv(output_filename, index=False)
             logger.debug(f"Data saved to {output_filename}")
 
