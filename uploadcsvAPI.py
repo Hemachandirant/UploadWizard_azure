@@ -53,7 +53,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*","https://uploadwizard-azure.onrender.com","https://cda-dws.azurewebsites.net/"],  # Allow specific frontend origin
+    allow_origins=["https://cda-dws.azurewebsites.net"],  # Allow specific frontend origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
