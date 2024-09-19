@@ -5,6 +5,7 @@ import os
 import csv
 import re
 import mysql.connector
+from langchain_google_genai import ChatGoogleGenerativeAI
 import io
 import pandas as pd
 import requests
@@ -53,7 +54,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://cda-dws.azurewebsites.net"],  # Allow specific frontend origin
+    allow_origins=["*","https://uploadwizard-azure.onrender.com","https://cda-dws.azurewebsites.net/"],  # Allow specific frontend origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -407,19 +408,9 @@ async def create_tables_with_relationships():
     return {"status": "Data processing completed", "details": messages}
 
 
+GOOGLE_API_KEY = "AIzaSyBffyUxh5WK0iA87rPkKYbmyxuyg-XyL-0"
 
-
-# Azure OpenAI setup
-llm = AzureChatOpenAI(
-    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-    temperature=0,
-    api_version=os.getenv("OPENAI_API_VERSION"),
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    max_tokens=None,
-    timeout=None,
-    max_retries=2,
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-)
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-exp-0827", api_key=GOOGLE_API_KEY)
 
 
 
