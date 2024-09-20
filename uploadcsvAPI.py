@@ -431,8 +431,8 @@ async def create_view():
     if len(table_names) == 0:
         return {"status": "No tables found in the database."}
 
-    # Handle the case where there's only one table
     if len(table_names) == 1:
+        # Handle the case where there's only one table
         table_name = table_names[0]
         sql_query = f"SELECT * FROM {table_name}"
         logger.debug(f"Single table SQL Query: {sql_query}")
@@ -450,7 +450,7 @@ async def create_view():
             df.to_csv(output_filename, index=False)
             logger.debug(f"Data saved to {output_filename}")
 
-            # Upload the CSV file to Azure Blob Storage using SAS URL and Token
+            # Upload the CSV file to Azure Blob Storage
             try:
                 blob_service_client = BlobServiceClient(account_url=base_url, credential=sas_token)
                 blob_client = blob_service_client.get_blob_client(container=container_name, blob=output_filename)
@@ -458,7 +458,7 @@ async def create_view():
                 with open(output_filename, "rb") as data:
                     blob_client.upload_blob(data, overwrite=True)
 
-                logger.debug("Data uploaded to Azure Blob Storage")
+                logger.debug(f"Data uploaded to Azure Blob Storage: {output_filename}")
             except Exception as e:
                 logger.error(f"Error uploading to Azure Blob Storage: {str(e)}")
                 raise HTTPException(status_code=500, detail=f"Error uploading to Azure Blob Storage: {str(e)}")
@@ -469,15 +469,17 @@ async def create_view():
             raise HTTPException(status_code=500, detail=f"SQLAlchemy error during query execution: {str(e)}")
         finally:
             session.close()
+
     else:
-        # Handle the case where there are multiple tables (your existing logic)
+        # Handle the case where there are multiple tables
         db = SQLDatabase(engine)
         chain = create_sql_query_chain(llm, db)
-        sql_query_raw = chain.invoke({"question": "combine the tables present in the database"})
-        logger.debug(f"Raw SQL Query: {sql_query_raw}")
 
-        # Extract the actual SQL query if there is additional text
-        sql_query_match = re.search(r"```sql\n(.*?)\n```", sql_query_raw, re.DOTALL)
+        sql_query_raw = chain.invoke({"question": "combine the tables present in the database"})
+        logger.debug(f"Raw response from chain: {sql_query_raw}")
+
+        # Extract the SQL query, either in triple-backticks or plain text
+        sql_query_match = re.search(r"```sql\n(.*?)\n```", sql_query_raw, re.DOTALL) or re.search(r"SELECT.*FROM.*", sql_query_raw, re.IGNORECASE)
         if sql_query_match:
             sql_query = sql_query_match.group(1).strip()
         else:
@@ -494,12 +496,12 @@ async def create_view():
             output_response = df.to_dict(orient="records")
             logger.debug(f"Query results: {output_response}")
 
-            # Save the DataFrame to a CSV file with the database name
+            # Save the DataFrame to a CSV file
             output_filename = f"{db_name_global.lower()}.csv"
             df.to_csv(output_filename, index=False)
             logger.debug(f"Data saved to {output_filename}")
 
-            # Upload the CSV file to Azure Blob Storage using SAS URL and Token
+            # Upload the CSV file to Azure Blob Storage
             try:
                 blob_service_client = BlobServiceClient(account_url=base_url, credential=sas_token)
                 blob_client = blob_service_client.get_blob_client(container=container_name, blob=output_filename)
@@ -507,7 +509,7 @@ async def create_view():
                 with open(output_filename, "rb") as data:
                     blob_client.upload_blob(data, overwrite=True)
 
-                logger.debug("Data uploaded to Azure Blob Storage")
+                logger.debug(f"Data uploaded to Azure Blob Storage: {output_filename}")
             except Exception as e:
                 logger.error(f"Error uploading to Azure Blob Storage: {str(e)}")
                 raise HTTPException(status_code=500, detail=f"Error uploading to Azure Blob Storage: {str(e)}")
@@ -524,4 +526,5 @@ async def create_view():
         return {"result": output_response, "sql_query": sql_query}
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
